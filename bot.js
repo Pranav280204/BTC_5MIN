@@ -19,7 +19,7 @@ const CONFIG = {
   MIN_NO_PRICE: n('MIN_NO_PRICE', 30),
   CONDITION_HOLD_MS: n('CONDITION_HOLD_MS', 1000),
   VIRTUAL_TRADE_AMOUNT: n('VIRTUAL_TRADE_AMOUNT', 10),
-  MARKET_POLL_MS: n('MARKET_POLL_MS', 100),
+  MARKET_POLL_MS: n('MARKET_POLL_MS', 1000),
   SUMMARY_MS: n('SUMMARY_MS', 30_000),
 };
 
@@ -95,8 +95,15 @@ async function main() {
     engine.buy(side, market, deviation, secsLeft, price, market.priceToBeat);
   }
 
+  let marketFetchInFlight = false;
   const refresh = async () => {
-    await polymarket.fetchMarkets();
+    if (marketFetchInFlight) return;
+    marketFetchInFlight = true;
+    try {
+      await polymarket.fetchMarkets();
+    } finally {
+      marketFetchInFlight = false;
+    }
   };
 
   await refresh();

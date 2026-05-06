@@ -81,12 +81,15 @@ function parseGammaEvent(eventData, windowTs) {
   const markets = event.markets || [];
   if (!markets.length) return null;
 
-  let upMarket   = markets.find(m => /up/i.test(m.groupItemTitle || m.question || ''));
-  let downMarket = markets.find(m => /down/i.test(m.groupItemTitle || m.question || ''));
+  const label = (m) => [m?.groupItemTitle, m?.question].filter(Boolean).join(' | ');
+  let upMarket   = markets.find(m => /\bup\b|above|higher|yes/i.test(label(m)));
+  let downMarket = markets.find(m => /\bdown\b|below|lower|no/i.test(label(m)));
 
-  // Fallback: Polymarket returns markets[0]=Up, markets[1]=Down
-  if (!upMarket)   upMarket   = markets[0];
-  if (!downMarket) downMarket = markets[1];
+  // Ensure distinct sides; fall back by index while avoiding duplicate object selection.
+  if (!upMarket) upMarket = markets[0] || null;
+  if (!downMarket || downMarket === upMarket) {
+    downMarket = markets.find((m) => m !== upMarket) || null;
+  }
   if (!upMarket || !downMarket) return null;
 
   // Token IDs — clobTokenIds is a JSON string like '["0xABC","0xDEF"]'
@@ -106,6 +109,8 @@ function parseGammaEvent(eventData, windowTs) {
   }
 
   const closeTs = windowTs + 300;
+
+  console.log('UP token:', tokenId(upMarket), 'DOWN token:', tokenId(downMarket));
 
   return new Market({
     slug:        event.slug || `btc-updown-5m-${windowTs}`,
