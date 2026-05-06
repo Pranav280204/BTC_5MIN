@@ -36,7 +36,7 @@ function get(url, depth = 0) {
 
 // ── Market model ──────────────────────────────────────────────────────────────
 class Market {
-  constructor({ slug, windowTs, closeTs, upTokenId, downTokenId, upPrice, downPrice }) {
+  constructor({ slug, windowTs, closeTs, upTokenId, downTokenId, upPrice, downPrice, priceToBeat = null }) {
     this.slug        = slug;
     this.windowTs    = windowTs;      // unix seconds — window open
     this.closeTs     = closeTs;       // unix seconds — window close
@@ -65,7 +65,8 @@ class Market {
   summary() {
     const secs = this.secondsUntilClose();
     const t = secs < 0 ? 'CLOSED' : secs < 60 ? `${secs}s left` : `${Math.floor(secs/60)}m ${secs%60}s left`;
-    return `[${t}] UP=${this.yesPrice.toFixed(1)}¢ DOWN=${this.noPrice.toFixed(1)}¢ | ${this.slug}`;
+    const beat = this.priceToBeat ? ` | beat=$${this.priceToBeat.toFixed(0)}` : '';
+    return `[${t}] UP=${this.yesPrice.toFixed(1)}¢ DOWN=${this.noPrice.toFixed(1)}¢${beat} | ${this.slug}`;
   }
 }
 
@@ -149,6 +150,7 @@ class PolymarketClient {
           if (market) {
             // Enrich with live CLOB prices
             await this._enrichClobPrice(market);
+            await this._enrichPriceToBeat(market);
             this._cache.set(slug, market);
             this.log.success(`Found market: ${market.summary()}`);
           } else {
@@ -157,6 +159,7 @@ class PolymarketClient {
         } else {
           // Refresh prices on cached market
           await this._enrichClobPrice(market);
+          await this._enrichPriceToBeat(market);
         }
 
         if (market) {

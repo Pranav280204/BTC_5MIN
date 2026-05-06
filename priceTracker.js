@@ -53,7 +53,8 @@ class PriceTracker {
       this._updateWindowPriceToBeat(chainlinkPrice, nowSec);
       this._currentPrice = chainlinkPrice;
 
-      if (this.onPrice) this.onPrice(this._currentPrice, this._priceToBeat);
+      this._currentPrice = parseFloat(msg.payload.value);
+      if (this.onPrice) this.onPrice(this._currentPrice);
     });
 
     ws.on('error', (err) => log.error('RTDS: ' + err.message));
