@@ -69,6 +69,7 @@ class Market {
   }
 }
 
+
 // ── Parse a Gamma events response into a Market ───────────────────────────────
 function parseGammaEvent(eventData, windowTs) {
   // events endpoint returns an array; take first match
@@ -196,6 +197,7 @@ class PolymarketClient {
       }
     } catch { /* keep gamma prices */ }
   }
+
 }
 
 module.exports = { PolymarketClient, Market };

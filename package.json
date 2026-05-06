@@ -1,4 +1,16 @@
 {
+  "name": "btc-5min-polymarket-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Polymarket BTC 5-minute strategy bot using RTDS + Price-to-Beat",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "check": "node --check bot.js && node --check priceTracker.js && node --check polymarket.js && node --check tradeEngine.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "ws": "^8.20.0"
   }
