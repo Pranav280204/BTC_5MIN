@@ -201,6 +201,48 @@ class PolymarketClient {
     } catch { /* keep gamma prices */ }
   }
 
+  async _enrichPriceToBeat(market) {
+    // Recover the "price to beat" strike from event/market text.
+    // Example strings usually include values like "$103,450".
+    const candidates = [market?.question, market?.slug];
+    for (const text of candidates) {
+      const strike = this._extractUsdNumber(text);
+      if (Number.isFinite(strike)) {
+        market.priceToBeat = strike;
+        return;
+      }
+    }
+
+    // Fallback: fetch event details and parse strike from title/question text.
+    try {
+      const url = `https://gamma-api.polymarket.com/events?slug=${encodeURIComponent(market.slug)}`;
+      const data = await get(url);
+      const event = Array.isArray(data) ? data[0] : data;
+      const texts = [
+        event?.title,
+        event?.question,
+        ...(event?.markets || []).flatMap((m) => [m?.question, m?.groupItemTitle]),
+      ];
+      for (const text of texts) {
+        const strike = this._extractUsdNumber(text);
+        if (Number.isFinite(strike)) {
+          market.priceToBeat = strike;
+          return;
+        }
+      }
+    } catch {
+      // Leave as null; strategy will skip until strike is available.
+    }
+  }
+
+  _extractUsdNumber(text) {
+    if (!text || typeof text !== 'string') return null;
+    const match = text.match(/\$\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]+)?|[0-9]+(?:\.[0-9]+)?)/);
+    if (!match) return null;
+    const n = Number(match[1].replace(/,/g, ''));
+    return Number.isFinite(n) ? n : null;
+  }
+
 }
 
 module.exports = { PolymarketClient, Market };
