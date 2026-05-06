@@ -25,9 +25,9 @@ class Logger {
 ║        POLYMARKET BTC BOT  ₿   (real-time)              ║
 ║  RTDS Chainlink oracle  ×  Polymarket live markets       ║
 ╚══════════════════════════════════════════════════════════╝`)));
-    console.log(c('gray', `  Strategy : BUY YES if price drops 30+ pts below 5-min PTB`));
-    console.log(c('gray', `             BUY NO  if price rises 30+ pts above 5-min PTB`));
-    console.log(c('gray', `             Only in last 45s of market close | $10 virtual\n`));
+    console.log(c('gray', `  Strategy : BUY YES if drop is 10–20 pts and YES>30¢ for 1s`));
+    console.log(c('gray', `             BUY NO  if rise is 10–20 pts and NO>30¢ for 1s`));
+    console.log(c('gray', `             Last 45s of market close | $10 virtual\n`));
     console.log(c('gray', `  Started  : ${new Date().toLocaleString()}\n`));
   }
 

@@ -2,6 +2,7 @@ const { Logger } = require('./logger');
 const { PriceTracker } = require('./priceTracker');
 const { PolymarketClient } = require('./polymarket');
 const { TradeEngine } = require('./tradeEngine');
+const { TelegramNotifier } = require('./notifier');
 
 const n = (key, fallback) => {
   const raw = process.env[key];
@@ -12,11 +13,13 @@ const n = (key, fallback) => {
 
 const CONFIG = {
   TRIGGER_WINDOW_SECONDS: n('TRIGGER_WINDOW_SECONDS', 45),
-  PRICE_DEVIATION_POINTS: n('PRICE_DEVIATION_POINTS', 30),
-  MIN_YES_PRICE: n('MIN_YES_PRICE', 15),
-  MIN_NO_PRICE: n('MIN_NO_PRICE', 15),
+  DEVIATION_MIN_POINTS: n('DEVIATION_MIN_POINTS', 10),
+  DEVIATION_MAX_POINTS: n('DEVIATION_MAX_POINTS', 20),
+  MIN_YES_PRICE: n('MIN_YES_PRICE', 30),
+  MIN_NO_PRICE: n('MIN_NO_PRICE', 30),
+  CONDITION_HOLD_MS: n('CONDITION_HOLD_MS', 1000),
   VIRTUAL_TRADE_AMOUNT: n('VIRTUAL_TRADE_AMOUNT', 10),
-  MARKET_POLL_MS: n('MARKET_POLL_MS', 10_000),
+  MARKET_POLL_MS: n('MARKET_POLL_MS', 100),
   SUMMARY_MS: n('SUMMARY_MS', 30_000),
 };
 
@@ -26,9 +29,15 @@ async function main() {
 
   const priceTracker = new PriceTracker();
   const polymarket = new PolymarketClient(log);
-  const engine = new TradeEngine(CONFIG, log);
+  const notifier = new TelegramNotifier({
+    token: process.env.TELEGRAM_BOT_TOKEN,
+    chatId: process.env.TELEGRAM_CHAT_ID,
+    enabled: process.env.TELEGRAM_ENABLED === '1' || process.env.TELEGRAM_ENABLED === 'true',
+  }, log);
+  const engine = new TradeEngine(CONFIG, log, notifier);
 
   let lastPriceLog = 0;
+  const conditionSince = new Map();
 
   priceTracker.onPrice = (price, beatPrice) => {
     const now = Date.now();
@@ -40,24 +49,51 @@ async function main() {
       const rise = price - beatPrice;
       const secsLeft = market.secondsUntilClose();
 
-      if (now - lastPriceLog >= 5000) {
+      if (now - lastPriceLog >= 1000) {
         lastPriceLog = now;
         log.tick(price, beatPrice, drop, 100);
       }
 
       if (secsLeft < 0 || secsLeft > CONFIG.TRIGGER_WINDOW_SECONDS) continue;
 
-      if (drop >= CONFIG.PRICE_DEVIATION_POINTS && market.yesPrice > CONFIG.MIN_YES_PRICE && market.canBuy('YES')) {
-        log.warn(`TRIGGER ▼ DROP ${drop.toFixed(0)}$ → BUY UP`);
-        engine.buy('YES', market, drop, secsLeft, price, market.priceToBeat);
-      }
+      const yesCondition = drop >= CONFIG.DEVIATION_MIN_POINTS
+        && drop <= CONFIG.DEVIATION_MAX_POINTS
+        && market.yesPrice > CONFIG.MIN_YES_PRICE
+        && market.canBuy('YES');
 
-      if (rise >= CONFIG.PRICE_DEVIATION_POINTS && market.noPrice > CONFIG.MIN_NO_PRICE && market.canBuy('NO')) {
-        log.warn(`TRIGGER ▲ RISE ${rise.toFixed(0)}$ → BUY DOWN`);
-        engine.buy('NO', market, rise, secsLeft, price, market.priceToBeat);
-      }
+      const noCondition = rise >= CONFIG.DEVIATION_MIN_POINTS
+        && rise <= CONFIG.DEVIATION_MAX_POINTS
+        && market.noPrice > CONFIG.MIN_NO_PRICE
+        && market.canBuy('NO');
+
+      handleCondition('YES', yesCondition, market, now, drop, secsLeft, price);
+      handleCondition('NO', noCondition, market, now, rise, secsLeft, price);
     }
   };
+
+  function handleCondition(side, condition, market, now, deviation, secsLeft, price) {
+    const key = `${market.slug}:${side}`;
+    if (!condition) {
+      conditionSince.delete(key);
+      return;
+    }
+
+    if (!conditionSince.has(key)) {
+      conditionSince.set(key, now);
+      return;
+    }
+
+    const heldFor = now - conditionSince.get(key);
+    if (heldFor < CONFIG.CONDITION_HOLD_MS) return;
+
+    conditionSince.delete(key);
+    if (side === 'YES') {
+      log.warn(`TRIGGER ▼ DROP ${deviation.toFixed(1)}$ held ${heldFor}ms → BUY YES`);
+    } else {
+      log.warn(`TRIGGER ▲ RISE ${deviation.toFixed(1)}$ held ${heldFor}ms → BUY NO`);
+    }
+    engine.buy(side, market, deviation, secsLeft, price, market.priceToBeat);
+  }
 
   const refresh = async () => {
     await polymarket.fetchMarkets();
