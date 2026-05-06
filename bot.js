@@ -49,12 +49,12 @@ async function main() {
 
       if (drop >= CONFIG.PRICE_DEVIATION_POINTS && market.yesPrice > CONFIG.MIN_YES_PRICE && market.canBuy('YES')) {
         log.warn(`TRIGGER ▼ DROP ${drop.toFixed(0)}$ → BUY UP`);
-        engine.buy('YES', market, drop, secsLeft, price, beatPrice);
+        engine.buy('YES', market, drop, secsLeft, price, market.priceToBeat);
       }
 
       if (rise >= CONFIG.PRICE_DEVIATION_POINTS && market.noPrice > CONFIG.MIN_NO_PRICE && market.canBuy('NO')) {
         log.warn(`TRIGGER ▲ RISE ${rise.toFixed(0)}$ → BUY DOWN`);
-        engine.buy('NO', market, rise, secsLeft, price, beatPrice);
+        engine.buy('NO', market, rise, secsLeft, price, market.priceToBeat);
       }
     }
   };
