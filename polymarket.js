@@ -188,26 +188,28 @@ class PolymarketClient {
   }
 
   async _enrichClobPrice(market) {
-    // Fetch live prices for both UP and DOWN tokens from CLOB orderbooks.
     const fetchBestAskCents = async (tokenId) => {
       if (!tokenId) return null;
-      const url = `https://clob.polymarket.com/book?token_id=${encodeURIComponent(tokenId)}`;
-      const book = await get(url);
-      if (!book.asks?.length) return null;
-      const ask = parseFloat(book.asks[0].price);
-      return Number.isFinite(ask) ? ask * 100 : null;
+      try {
+        const url = `https://clob.polymarket.com/book?token_id=${encodeURIComponent(tokenId)}`;
+        const book = await get(url);
+        const bestAsk = book?.asks?.[0]?.price;
+        const ask = Number(bestAsk);
+        return Number.isFinite(ask) ? ask * 100 : null;
+      } catch {
+        return null;
+      }
     };
 
-    try {
-      const [upAsk, downAsk] = await Promise.all([
-        fetchBestAskCents(market.upTokenId),
-        fetchBestAskCents(market.downTokenId),
-      ]);
+    const [upAsk, downAsk] = await Promise.all([
+      fetchBestAskCents(market.upTokenId),
+      fetchBestAskCents(market.downTokenId),
+    ]);
 
-      if (upAsk !== null) market.yesPrice = upAsk;
-      if (downAsk !== null) market.noPrice = downAsk;
-    } catch { /* keep gamma prices */ }
+    if (upAsk !== null) market.yesPrice = upAsk;
+    if (downAsk !== null) market.noPrice = downAsk;
   }
+
 
   async _enrichPriceToBeat(market) {
     // Recover the "price to beat" strike from event/market text.
