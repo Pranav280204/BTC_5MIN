@@ -26,11 +26,12 @@ class Trade {
 }
 
 class TradeEngine {
-  constructor(config, log) {
+  constructor(config, log, notifier = null) {
     this.config  = config;
     this.log     = log;
     this.trades  = [];
     this.balance = 1000;   // virtual starting balance
+    this.notifier = notifier;
     this.wins    = 0;
     this.losses  = 0;
   }
@@ -58,6 +59,7 @@ class TradeEngine {
     this.trades.push(trade);
     this._executeVirtual(trade);
     this.log.trade(trade, this.balance);
+    this._notifyTrade(trade);
   }
 
   /**
@@ -84,6 +86,20 @@ class TradeEngine {
    *   console.log('Order placed:', order.orderID);
    * ─────────────────────────────────────────────────────────────────────────
    */
+  async _notifyTrade(trade) {
+    if (!this.notifier) return;
+    const msg = [
+      '*📈 Virtual trade placed*',
+      `#${trade.id} BUY ${trade.side}`,
+      `Market: ${trade.market.slice(0, 80)}`,
+      `Entry: ${trade.price.toFixed(1)}¢ | Gap: ${trade.deviation.toFixed(1)}$ | T-${trade.secsLeft}s`,
+      `BTC: $${trade.btcPrice.toFixed(2)} | Beat: $${trade.beatPrice.toFixed(2)}`,
+      `Amount: $${trade.amount.toFixed(2)} | Balance: $${this.balance.toFixed(2)}`,
+      `Portfolio: trades=${this.trades.length}, wins=${this.wins}, losses=${this.losses}`
+    ].join('\n');
+    await this.notifier.send(msg);
+  }
+
   _executeVirtual(trade) {
     // Simulate settlement after 10 seconds (for demo feedback)
     setTimeout(() => this._settle(trade), 10_000);
