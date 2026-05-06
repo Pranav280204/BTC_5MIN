@@ -2,11 +2,10 @@
 
 This bot uses **only Polymarket-native data**:
 
-- **RTDS WebSocket** (`wss://ws-live-data.polymarket.com`) for live BTC oracle ticks (Chainlink stream).
-- **Price To Beat API** (`/api/equity/price-to-beat/{slug}`) for the exact resolver threshold per market.
+- **RTDS WebSocket** (`wss://ws-live-data.polymarket.com`) for live BTC Chainlink oracle ticks.
 - **Gamma + CLOB APIs** for market discovery and live YES/NO pricing.
 
-No direct Binance feed is used by the bot.
+No direct Binance feed and no BTC `price-to-beat` REST call are used.
 
 ## Local run
 
@@ -33,8 +32,8 @@ npm start
 
 For each active 5-minute BTC Up/Down market:
 
-1. Read `priceToBeat` from Polymarket API for that market slug.
-2. Read live BTC oracle price from RTDS Chainlink stream.
+1. Read live BTC Chainlink oracle price from RTDS.
+2. Set **Price to Beat** as the **first Chainlink tick in each 5-minute window** (`unixTime % 300 === 0` window boundary).
 3. In the final `TRIGGER_WINDOW_SECONDS` before close:
    - Buy **YES** when `(priceToBeat - price) >= PRICE_DEVIATION_POINTS`
    - Buy **NO** when `(price - priceToBeat) >= PRICE_DEVIATION_POINTS`
@@ -42,7 +41,7 @@ For each active 5-minute BTC Up/Down market:
 ## Main files
 
 - `bot.js` — orchestration and trigger logic
-- `priceTracker.js` — RTDS Chainlink BTC stream
-- `polymarket.js` — market loading + CLOB prices + price-to-beat enrichment
+- `priceTracker.js` — RTDS Chainlink BTC stream + 5-minute boundary PTB snapshot
+- `polymarket.js` — market loading + CLOB prices
 - `tradeEngine.js` — virtual trade execution
 - `logger.js` — terminal output

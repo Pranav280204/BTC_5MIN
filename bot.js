@@ -30,19 +30,19 @@ async function main() {
 
   let lastPriceLog = 0;
 
-  priceTracker.onPrice = (price) => {
+  priceTracker.onPrice = (price, beatPrice) => {
     const now = Date.now();
 
     for (const market of polymarket.getMarkets()) {
-      if (!market.priceToBeat) continue;
+      if (!beatPrice) continue;
 
-      const drop = market.priceToBeat - price;
-      const rise = price - market.priceToBeat;
+      const drop = beatPrice - price;
+      const rise = price - beatPrice;
       const secsLeft = market.secondsUntilClose();
 
       if (now - lastPriceLog >= 5000) {
         lastPriceLog = now;
-        log.tick(price, market.priceToBeat, drop, 100);
+        log.tick(price, beatPrice, drop, 100);
       }
 
       if (secsLeft < 0 || secsLeft > CONFIG.TRIGGER_WINDOW_SECONDS) continue;

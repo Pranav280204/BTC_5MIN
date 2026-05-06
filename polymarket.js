@@ -70,6 +70,7 @@ class Market {
   }
 }
 
+
 // ── Parse a Gamma events response into a Market ───────────────────────────────
 function parseGammaEvent(eventData, windowTs) {
   // events endpoint returns an array; take first match
@@ -200,17 +201,6 @@ class PolymarketClient {
     } catch { /* keep gamma prices */ }
   }
 
-  async _enrichPriceToBeat(market) {
-    try {
-      const data = await get(`https://polymarket.com/api/equity/price-to-beat/${encodeURIComponent(market.slug)}`);
-      const value = data?.price_to_beat ?? data?.priceToBeat ?? data?.value ?? null;
-      if (value !== null && Number.isFinite(Number(value))) {
-        market.priceToBeat = Number(value);
-      }
-    } catch (err) {
-      this.log.warn(`price-to-beat [${market.slug}]: ${err.message}`);
-    }
-  }
 }
 
 module.exports = { PolymarketClient, Market };
