@@ -23,10 +23,10 @@ class Logger {
     console.log(c('cyan', c('bright', `
 ╔══════════════════════════════════════════════════════════╗
 ║        POLYMARKET BTC BOT  ₿   (real-time)              ║
-║  Binance WebSocket price  ×  Polymarket live markets     ║
+║  RTDS Chainlink oracle  ×  Polymarket live markets       ║
 ╚══════════════════════════════════════════════════════════╝`)));
-    console.log(c('gray', `  Strategy : BUY YES if price drops 30+ pts below 5-min high`));
-    console.log(c('gray', `             BUY NO  if price rises 30+ pts above 5-min high`));
+    console.log(c('gray', `  Strategy : BUY YES if price drops 30+ pts below 5-min PTB`));
+    console.log(c('gray', `             BUY NO  if price rises 30+ pts above 5-min PTB`));
     console.log(c('gray', `             Only in last 45s of market close | $10 virtual\n`));
     console.log(c('gray', `  Started  : ${new Date().toLocaleString()}\n`));
   }
